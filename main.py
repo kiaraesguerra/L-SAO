@@ -3,13 +3,14 @@ import torch
 from pytorch_lightning import Trainer
 
 
-from dataloaders import get_dataloader
-from callbacks import get_callback
-from loggers import get_logger
-from models import get_model
-from initializers import get_initializer
-from utils import remove_parameters, measure_sparsity
-from train_utils import get_plmodule
+from dataloaders.dataloaders import get_dataloader
+from callbacks.callbacks import get_callback
+from loggers.loggers import get_logger
+from models.models import get_model
+from initializers.initializers import get_weight_init
+from ls_initializers.ls_init import get_ls_init
+from utils.pruning_utils import remove_parameters, measure_sparsity
+from utils.train_utils import get_plmodule
 
 parser = argparse.ArgumentParser(description="PyTorch CIFAR-10")
 
@@ -19,10 +20,17 @@ parser.add_argument("--weight-init", type=str, default="ortho")
 parser.add_argument("--activation", type=str, default="tanh", choices=["tanh", "relu"])
 
 
-parser.add_argument("--pruning-method", type=str, default=None)
+parser.add_argument("--method", type=str, default=None)
 parser.add_argument("--degree", type=int, default=None)
 parser.add_argument("--sparsity", type=float, default=None)
 parser.add_argument("--gain", type=float, default=1.0)
+
+# triggers Low Rank Factorization
+parser.add_argument("--low-rank", type=bool, default=False)
+
+# triggers S matrix
+parser.add_argument("--sparse-matrix", type=str, default=None, choices=['SAO', 'LMP', 'RG-U', 'RG-N'])
+
 
 
 parser.add_argument("--dataset", type=str, default="cifar10")
@@ -72,7 +80,15 @@ if __name__ == "__main__":
 
     train_dl, validate_dl, test_dl = get_dataloader(args)
     model = get_model(args)
-    model = get_initializer(model, args)
+    
+    
+    model = get_weight_init(model, args)
+    
+    if args.low_rank:
+        model = get_ls_init(model, args)
+    
+    breakpoint()
+    
     model = get_plmodule(model, args)
     callbacks = get_callback(args)
     logger = get_logger(args)

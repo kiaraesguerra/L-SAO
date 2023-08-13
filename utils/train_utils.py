@@ -2,10 +2,9 @@ from pytorch_lightning import LightningModule
 import torch
 from torchmetrics import Accuracy
 
-from utils import *
-from optimizers import *
-from schedulers import *
-from criterions import *
+from optimizers.optimizers import get_optimizer
+from schedulers.schedulers import get_scheduler
+from criterions.criterions import get_criterion
 
 
 def get_plmodule(model, args):

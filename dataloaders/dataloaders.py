@@ -107,7 +107,7 @@ def get_dataloader(args):
 def get_transform(args):
     if args.dataset in ["cifar10", "cifar100", "svhn", "cinic10"]:
         args.padding = 4
-        args.size = 32
+        args.image_size = 32
         if args.dataset == "cifar10":
             args.mean, args.std = [0.4914, 0.4822, 0.4465], [0.2470, 0.2435, 0.2616]
         elif args.dataset == "cifar100":
@@ -123,18 +123,17 @@ def get_transform(args):
 
     elif args.dataset == 'mnist':
         args.in_channels = 1
-        args.size = 28
         args.image_size = 28
         args.padding=4
         args.mean, args.std = [0.1307], [0.3081]
 
     else:
         args.padding = 28
-        args.size = 224
+        args.image_size = 224
         args.mean, args.std = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
 
     train_transform_list = [
-        transforms.RandomCrop(size=(args.size, args.size), padding=args.padding),
+        transforms.RandomCrop(size=(args.image_size, args.image_size), padding=args.padding),
         transforms.Resize(size=(args.image_size, args.image_size)),
     ]
 
