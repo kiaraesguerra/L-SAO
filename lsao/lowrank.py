@@ -4,7 +4,7 @@ from ramanujan_constructions import Ramanujan_Constructions
 
 
 class LowRankSparseLinear(nn.Module):
-    def __init__(self, in_features, out_features, rank, mode='SAO', degree=2):
+    def __init__(self, in_features, out_features, rank, mode='SAO', degree=64):
         super(LowRankSparseLinear, self).__init__()
         
         self.rank = rank
@@ -23,7 +23,8 @@ class LowRankSparseLinear(nn.Module):
         return x1 + x2
 
 class LowRankSparseInitializer:
-    def __init__(self, model, degree):
+    def __init__(self, model, mode, degree):
+        self.mode = mode
         self.model = model
         self.degree = degree
         
@@ -35,7 +36,7 @@ class LowRankSparseInitializer:
             self.sao_mask = sao_mask
             
         elif self.mode == 'LMP':
-            s_module = nn.Module(module.out_features, module.in_features)
+            s_module = nn.Linear(module.out_features, module.in_features).to('cuda')
             nn.init.orthogonal_(s_module.weight)
             torch.nn.utils.prune.ln_structured(s_module, name="weight", amount=0.5, n=2, dim=0)
             self.lmp_matrix = s_module.weight
@@ -48,10 +49,10 @@ class LowRankSparseInitializer:
         elif self.mode == 'LMP':
             S_weight_matrix = self.lmp_matrix
         
-        LR = module.weight - S_weight_matrix
+        LR = module.weight.to('cuda') - S_weight_matrix.to('cuda')
         u, s, v = torch.linalg.svd(LR)
         s_diag = torch.diag_embed(s)
-        rank = torch.sum(s > 0.5)
+        rank = torch.sum(s > 1e-3)
         w = s_diag@v
         w_weight_matrix = w[0:rank, :] 
         u_weight_matrix = u[:, 0:rank] 
@@ -64,9 +65,13 @@ class LowRankSparseInitializer:
         return LRS_module
 
     def initialize_low_rank(self):
+
+        for module_name, module in self.model.named_modules():
+            if isinstance(module, nn.Linear):
+                nn.init.orthogonal_(module.weight, gain=1)
+            
         for module_name, module in self.model.hidden_layers.named_modules():
             if isinstance(module, nn.Linear):
-                breakpoint()
                 self.model.hidden_layers._modules[module_name] = self.low_rank(module)
             
         return self.model
@@ -74,5 +79,4 @@ class LowRankSparseInitializer:
 def LowRankSparse(model, mode, degree):
     initializer = LowRankSparseInitializer(model, mode=mode, degree=degree)
     initialized_model = initializer.initialize_low_rank().to('cuda')
-    
     return initialized_model

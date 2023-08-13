@@ -44,11 +44,10 @@ def get_dataloader(args):
         args.in_channels = 3
         
     elif args.dataset == "mnist":
-        train_ds = torchvision.datasets.MNIST(
-            "./datasets", split="train", transform=train_transform, download=True
+        train_ds = torchvision.datasets.MNIST("./datasets", train=True, transform=train_transform, download=True
         )
         test_ds = torchvision.datasets.MNIST(
-            "./datasets", split="test", transform=test_transform, download=True
+            "./datasets", train=False, transform=test_transform, download=True
         )
         validate_ds = None
         args.num_classes = 10
@@ -121,6 +120,13 @@ def get_transform(args):
                 0.23828046,
                 0.25874835,
             ]
+
+    elif args.dataset == 'mnist':
+        args.in_channels = 1
+        args.size = 28
+        args.image_size = 28
+        args.padding=4
+        args.mean, args.std = [0.1307], [0.3081]
 
     else:
         args.padding = 28

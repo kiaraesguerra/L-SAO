@@ -16,5 +16,10 @@ def get_callback(args):
             mode="max",
         )
         callbacks.append(checkpoint_callback)
+        
+    # if "earlystopping" in args.callbacks:
+    #     callbacks.append(earlystopping_callback)
+    # if "richmodelsummary" in args.callbacks:
+    #     callbacks.append(richmodelsummary)
 
     return callbacks

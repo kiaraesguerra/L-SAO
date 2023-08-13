@@ -26,7 +26,6 @@ parser.add_argument("--gain", type=float, default=1.0)
 
 
 parser.add_argument("--dataset", type=str, default="cifar10")
-parser.add_argument("--image-size", type=int, default=32)
 parser.add_argument("--autoaugment", type=bool, default=False)
 parser.add_argument("--flip", type=bool, default=False)
 parser.add_argument("--batch-size", default=128, type=int)
