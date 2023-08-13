@@ -29,8 +29,9 @@ parser.add_argument("--gain", type=float, default=1.0)
 parser.add_argument("--low-rank", type=bool, default=False)
 
 # triggers S matrix
-parser.add_argument("--sparse-matrix", type=str, default=None, choices=['SAO', 'LMP', 'RG-U', 'RG-N'])
-
+parser.add_argument(
+    "--sparse-matrix", type=str, default=None, choices=["SAO", "LMP", "RG-U", "RG-N"]
+)
 
 
 parser.add_argument("--dataset", type=str, default="cifar10")
@@ -64,6 +65,7 @@ parser.add_argument("--label-smoothing", type=float, default=0)
 parser.add_argument("--device", type=str, default="cuda")
 
 
+parser.add_argument("--baseline-path", type=str, default=None)
 parser.add_argument("--ckpt-path", type=str, default=None)
 parser.add_argument("--ckpt-path-resume", type=str, default=None)
 parser.add_argument("--experiment-name", type=str, default="experiment")
@@ -80,11 +82,17 @@ if __name__ == "__main__":
 
     train_dl, validate_dl, test_dl = get_dataloader(args)
     model = get_model(args)
-    model = get_weight_init(model, args)
-    
+
+    # args.baseline_path should point to the .pt file
+    if args.baseline_path:
+        model_checkpoint = torch.load(args.baseline_path)
+        model.load_state_dict(torch.load(args.baseline_path))
+    else:
+        model = get_weight_init(model, args)
+
     if args.low_rank:
         model = get_ls_init(model, args)
-    
+
     model = get_plmodule(model, args)
     callbacks = get_callback(args)
     logger = get_logger(args)
@@ -95,15 +103,14 @@ if __name__ == "__main__":
         logger=logger,
     )
 
-    trainer.fit(model, train_dl, validate_dl, ckpt_path=args.ckpt_path)
-    trainer.test(dataloaders=test_dl, ckpt_path=args.ckpt_path)
+    trainer.fit(model, train_dl, validate_dl)
+    trainer.test(dataloaders=test_dl)
     ckpt_path = callbacks[0].best_model_path
     model_checkpoint = torch.load(ckpt_path)
     model.load_state_dict(model_checkpoint["state_dict"])
 
-
     remove_parameters(model)
     torch.save(
-        model.state_dict(),
+        model.model.state_dict(),
         f"{args.dirpath}/{args.experiment_name}/{args.experiment_name}.pt",
     )

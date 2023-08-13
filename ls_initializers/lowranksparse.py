@@ -46,7 +46,7 @@ class LowRankSparseInitializer:
         sparse_matrix: str = None,
         sparsity: float = None,
         degree: int = None,
-        activation: str = 'tanh'
+        activation: str = "tanh",
     ):
         self.sparse_matrix = sparse_matrix
         self.model = model
@@ -62,7 +62,7 @@ class LowRankSparseInitializer:
                 method=self.sparse_matrix,
                 sparsity=self.sparsity,
                 degree=self.degree,
-                activation=self.activation
+                activation=self.activation,
             )
             s_weight_matrix, _ = constructor()
 
@@ -90,6 +90,7 @@ class LowRankSparseInitializer:
         s_diag = torch.diag_embed(s)
         rank = torch.sum(s > 1e-3)
         w = s_diag @ v
+        print(rank)
 
         # Acquiring the low rank weight matrix
         w_weight_matrix = w[0:rank, :]
@@ -108,7 +109,7 @@ class LowRankSparseInitializer:
         # Assigning the low rank weight matrices (W and U) and the sparse matrix (S) to the LS module
         LRS_module.W_layer.weight = nn.Parameter(w_weight_matrix)
         LRS_module.U_layer.weight = nn.Parameter(u_weight_matrix)
-        
+
         if self.sparse_matrix:
             LRS_module.S_layer.weight = nn.Parameter(s_weight_matrix)
             # Pruning the sparse matrix so that it is not updated during training
