@@ -80,14 +80,10 @@ if __name__ == "__main__":
 
     train_dl, validate_dl, test_dl = get_dataloader(args)
     model = get_model(args)
-    
-    
     model = get_weight_init(model, args)
     
     if args.low_rank:
         model = get_ls_init(model, args)
-    
-    breakpoint()
     
     model = get_plmodule(model, args)
     callbacks = get_callback(args)

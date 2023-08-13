@@ -46,11 +46,13 @@ class LowRankSparseInitializer:
         sparse_matrix: str = None,
         sparsity: float = None,
         degree: int = None,
+        activation: str = 'tanh'
     ):
         self.sparse_matrix = sparse_matrix
         self.model = model
         self.sparsity = sparsity
         self.degree = degree
+        self.activation = activation
 
     def _sparse_matrix(self, module):
         if self.sparse_matrix in ["SAO", "RG-N", "RG-U"]:
@@ -60,6 +62,7 @@ class LowRankSparseInitializer:
                 method=self.sparse_matrix,
                 sparsity=self.sparsity,
                 degree=self.degree,
+                activation=self.activation
             )
             s_weight_matrix, _ = constructor()
 
