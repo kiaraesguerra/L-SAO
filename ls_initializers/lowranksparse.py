@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from ls_initializers.ramanujan_constructions import Ramanujan_Constructions
+from initializers.weight_init import _ortho_generator
 
 
 class LSModule(nn.Module):
@@ -70,7 +71,7 @@ class LowRankSparseInitializer:
 
         elif self.sparse_matrix == "LMP":
             s_module = nn.Linear(module.out_features, module.in_features).to("cuda")
-            nn.init.orthogonal_(s_module.weight)
+            s_module.weight = nn.Parameter(_ortho_generator(module, self.activation))
             torch.nn.utils.prune.ln_structured(
                 s_module, name="weight", amount=self.sparsity, n=2, dim=0
             )
