@@ -44,11 +44,13 @@ class LowRankSparseInitializer:
         self,
         model: nn.Module,
         sparse_matrix: str = None,
+        threshold: float = 1e-3,
         sparsity: float = None,
         degree: int = None,
         activation: str = "tanh",
     ):
         self.sparse_matrix = sparse_matrix
+        self.threshold = threshold
         self.model = model
         self.sparsity = sparsity
         self.degree = degree
@@ -88,7 +90,7 @@ class LowRankSparseInitializer:
         # Performing SVD on the difference matrix
         u, s, v = torch.linalg.svd(LR)
         s_diag = torch.diag_embed(s)
-        rank = torch.sum(s > 1e-3)
+        rank = torch.sum(s > self.threshold)
         w = s_diag @ v
         print(rank)
 

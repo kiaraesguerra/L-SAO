@@ -3,6 +3,7 @@ from ls_initializers.lowranksparse import LowRankSparseInitializer
 def get_ls_init(model, args):
     initializer = LowRankSparseInitializer(model,
                                             sparse_matrix=args.sparse_matrix,
+                                            threshold=args.threshold,
                                             sparsity=args.sparsity,
                                             degree=args.degree,
                                             activation=args.activation)
