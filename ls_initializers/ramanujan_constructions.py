@@ -15,6 +15,7 @@ class Ramanujan_Constructions:
         degree: int = None,
         method: str = "SAO",
         same_mask: bool = True,
+        same_weights: bool = True,
         activation: str = "relu",
         device: str = "cuda",
     ):
@@ -28,6 +29,7 @@ class Ramanujan_Constructions:
         self.device = device
         self.activation = activation
         self.same_mask = same_mask
+        self.same_weights = same_weights
         self.ramanujan_mask = None
 
         if self.activation == "relu" and self.in_ != 3:
@@ -49,6 +51,54 @@ class Ramanujan_Constructions:
         )
 
         return W
+
+    def _rg(self, ramanujan_mask, degree):
+        sao_matrix = torch.zeros(ramanujan_mask.shape).to(self.device)
+        num_ortho = int(degree * ramanujan_mask.shape[0] / ramanujan_mask.shape[1])
+
+        _, inv, counts = torch.unique(
+            ramanujan_mask, dim=0, return_inverse=True, return_counts=True
+        )
+        row_index = [
+            tuple(torch.where(inv == i)[0].tolist())
+            for i, c, in enumerate(counts)
+            if counts[i] > 1
+        ]
+
+        if num_ortho == 1:
+            to_iterate = inv.reshape(inv.shape[0], 1)
+        else:
+            to_iterate = row_index
+
+        for i in to_iterate:
+            indices = torch.tensor(i).to(self.device)
+            identical_row = ramanujan_mask[indices]
+            vals = self._val_generator()
+            for j in range(identical_row.shape[0]):
+                nonzeros = torch.nonzero(identical_row[j])
+                identical_row[j, nonzeros] = (
+                    vals[j].reshape(vals.shape[1], 1).to(self.device)
+                )
+            sao_matrix[indices] = identical_row
+
+        return sao_matrix
+    
+    def _rg_2(self, ramanujan_mask, degree):
+        nonzeros = torch.nonzero(ramanujan_mask)
+        sao_matrix = torch.zeros(ramanujan_mask.shape)
+        
+        col_num = 0
+        vals = self._val_generator()
+
+        for i,j in nonzeros:
+            row_num = int(i/(ramanujan_mask.shape[0]/degree))         
+            if col_num == degree:
+                col_num = 0
+
+            sao_matrix[i, j] = torch.tensor(vals[row_num, col_num])
+            col_num +=1
+            
+        return sao_matrix.to('cuda')   
 
     def _block_construct(self):
         """_summary_
@@ -116,34 +166,12 @@ class Ramanujan_Constructions:
         c = int(torch.sum(ramanujan_mask, 0)[0])
         d = int(torch.sum(ramanujan_mask, 1)[0])
         degree = c if c > d else d
-        sao_matrix = torch.zeros(ramanujan_mask.shape).to(self.device)
-        num_ortho = int(degree * ramanujan_mask.shape[0] / ramanujan_mask.shape[1])
-
-        _, inv, counts = torch.unique(
-            ramanujan_mask, dim=0, return_inverse=True, return_counts=True
-        )
-        row_index = [
-            tuple(torch.where(inv == i)[0].tolist())
-            for i, c, in enumerate(counts)
-            if counts[i] > 1
-        ]
-
-        if num_ortho == 1:
-            to_iterate = inv.reshape(inv.shape[0], 1)
+        
+        if self.same_weights is True:
+            sao_matrix = self._rg_2(ramanujan_mask, degree)
         else:
-            to_iterate = row_index
-
-        for i in to_iterate:
-            indices = torch.tensor(i).to(self.device)
-            identical_row = ramanujan_mask[indices]
-            vals = self._val_generator()
-            for j in range(identical_row.shape[0]):
-                nonzeros = torch.nonzero(identical_row[j])
-                identical_row[j, nonzeros] = (
-                    vals[j].reshape(vals.shape[1], 1).to(self.device)
-                )
-            sao_matrix[indices] = identical_row
-
+            sao_matrix = self._rg(ramanujan_mask, degree)
+        
         return sao_matrix
 
     def _ramanujan_structure(self):

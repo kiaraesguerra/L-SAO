@@ -38,6 +38,7 @@ parser.add_argument("--num-workers", default=4, type=int)
 parser.add_argument("--seed", type=int, default=3407)
 parser.add_argument("--autoaugment", action="store_true")
 parser.add_argument("--flip", action="store_true")
+parser.add_argument("--same-weights", action="store_true")
 
 parser.add_argument("--epochs", default=200, type=int, metavar="N")
 parser.add_argument("--warmup-epoch", type=int, default=0)
@@ -87,7 +88,9 @@ if __name__ == "__main__":
 
     if args.low_rank:
         model = get_ls_init(model, args)
-
+        
+        
+    breakpoint()
     model = get_plmodule(model, args)
     callbacks = get_callback(args)
     logger = get_logger(args)
