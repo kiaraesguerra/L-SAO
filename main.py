@@ -14,6 +14,7 @@ from utils.train_utils import get_plmodule
 
 parser = argparse.ArgumentParser(description="PyTorch CIFAR-10")
 
+parser.add_argument("--model", type=str, default="mlp")
 parser.add_argument("--num-layers", type=int, default=5)
 parser.add_argument("--width", "--hidden-width", type=int, default=16)
 parser.add_argument("--weight-init", type=str, default="ortho")
@@ -24,7 +25,9 @@ parser.add_argument("--sparsity", type=float, default=None)
 parser.add_argument("--gain", type=float, default=1.0)
 
 
-parser.add_argument("--low-rank", action="store_true") # Will set low-rank to True if --low-rank is called
+parser.add_argument(
+    "--low-rank", action="store_true"
+)  # Will set low-rank to True if --low-rank is called
 parser.add_argument(
     "--sparse-matrix", type=str, default=None, choices=["SAO", "LMP", "RG-U", "RG-N"]
 )
@@ -88,9 +91,7 @@ if __name__ == "__main__":
 
     if args.low_rank:
         model = get_ls_init(model, args)
-        
-        
-    breakpoint()
+
     model = get_plmodule(model, args)
     callbacks = get_callback(args)
     logger = get_logger(args)

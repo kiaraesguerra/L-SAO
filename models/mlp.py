@@ -28,7 +28,10 @@ class MLP(nn.Module):
             image_size * image_size * in_channels, hidden_width
         )
         self.hidden_layers = nn.ModuleList(
-            [nn.Linear(hidden_width, hidden_width, bias=False) for _ in range(num_layers - 1)]
+            [
+                nn.Linear(hidden_width, hidden_width, bias=False)
+                for _ in range(num_layers - 1)
+            ]
         )
         self.output_layer = nn.Linear(hidden_width, num_classes)
 
