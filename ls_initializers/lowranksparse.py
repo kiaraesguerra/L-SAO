@@ -13,6 +13,7 @@ class LSModule(nn.Module):
         sparse_matrix: str = None,
         sparsity: float = None,
         degree: float = None,
+        layer_type: str = "linear",
     ):
         super(LSModule, self).__init__()
 
@@ -22,14 +23,35 @@ class LSModule(nn.Module):
         self.sparsity = sparsity
         self.in_features = in_features
         self.out_features = out_features
-        self.W_layer = nn.Linear(in_features=in_features, out_features=rank, bias=False)
-        self.U_layer = nn.Linear(
-            in_features=rank, out_features=out_features, bias=False
-        )
-        if self.sparse_matrix:
-            self.S_layer = nn.Linear(
-                in_features=in_features, out_features=out_features, bias=False
+        self.layer_type = layer_type
+
+        if self.layer_type == "linear":
+            self.W_layer = nn.Linear(
+                in_features=in_features, out_features=rank, bias=False
             )
+            self.U_layer = nn.Linear(
+                in_features=rank, out_features=out_features, bias=False
+            )
+        else:
+            self.W_layer = nn.Conv1d(
+                in_channels=in_features, out_channels=rank, kernel_size=1, bias=False
+            )
+            self.U_layer = nn.Conv1d(
+                in_channels=rank, out_channels=out_features, kernel_size=1, bias=False
+            )
+
+        if self.sparse_matrix:
+            if self.layer_type == "linear":
+                self.S_layer = nn.Linear(
+                    in_features=in_features, out_features=out_features, bias=False
+                )
+            else:
+                self.S_layer = nn.Conv1d(
+                    in_channels=in_features,
+                    out_channels=out_features,
+                    kernel_size=1,
+                    bias=False,
+                )
 
     def forward(self, x):
         x1 = self.W_layer(x)
@@ -49,6 +71,7 @@ class LowRankSparseInitializer:
         sparsity: float = None,
         degree: int = None,
         activation: str = "tanh",
+        rank: int = None,
     ):
         self.sparse_matrix = sparse_matrix
         self.threshold = threshold
@@ -56,12 +79,13 @@ class LowRankSparseInitializer:
         self.sparsity = sparsity
         self.degree = degree
         self.activation = activation
+        self.rank = rank
 
     def _sparse_matrix(self, module):
         if self.sparse_matrix in ["SAO", "RG-N", "RG-U"]:
             constructor = Ramanujan_Constructions(
-                height=module.out_features,
-                width=module.in_features,
+                height=module.weight.shape[0],
+                width=module.weight.shape[1],
                 method=self.sparse_matrix,
                 sparsity=self.sparsity,
                 degree=self.degree,
@@ -79,54 +103,88 @@ class LowRankSparseInitializer:
 
         return s_weight_matrix
 
-    def _low_rank_sparse(self, module):
-        # Acquiring the original weight matrix
-        LR = module.weight.to("cuda")
+    def _low_rank_sparse(self, module, layer_type):
+        LR = module.weight.reshape(module.weight.shape[0], -1).to("cuda")
 
-        # Acquiring the sparse matrix and subtracting it from the original weight matrix
         if self.sparse_matrix:
             s_weight_matrix = self._sparse_matrix(module)
             LR = LR - s_weight_matrix
 
-        # Performing SVD on the difference matrix
-        u, s, v = torch.linalg.svd(LR)
-        s_diag = torch.diag_embed(s)
-        rank = torch.sum(s > self.threshold)
-        w = s_diag @ v
-        print(rank)
+        if not self.rank:
+            # Performing SVD on the difference matrix
+            padded_s = torch.zeros(module.weight.shape[0], module.weight.shape[1]).to(
+                "cuda"
+            )
+            u, s, v = torch.linalg.svd(LR)
+            s_diag = torch.diag_embed(s)
+            padded_s[0 : s_diag.shape[0], 0 : s_diag.shape[1]] = s_diag
+            rank = torch.sum(s > self.threshold)
+            w = padded_s @ v
+            w_weight_matrix = w[0:rank, :]
+            u_weight_matrix = u[:, 0:rank]
+        else:
+            rank = self.rank
 
-        # Acquiring the low rank weight matrix
-        w_weight_matrix = w[0:rank, :]
-        u_weight_matrix = u[:, 0:rank]
-
-        # Initializing the LS module
         LRS_module = LSModule(
-            in_features=module.in_features,
-            out_features=module.out_features,
+            in_features=module.weight.shape[1],
+            out_features=module.weight.shape[0],
             rank=rank,
             sparse_matrix=self.sparse_matrix,
             sparsity=self.sparsity,
             degree=self.degree,
+            layer_type=layer_type,
         )
 
-        # Assigning the low rank weight matrices (W and U) and the sparse matrix (S) to the LS module
-        LRS_module.W_layer.weight = nn.Parameter(w_weight_matrix)
-        LRS_module.U_layer.weight = nn.Parameter(u_weight_matrix)
+        if self.rank:
+            LRS_module.W_layer.weight = nn.Parameter(
+                _ortho_generator(LRS_module.W_layer, self.activation).reshape(
+                    LRS_module.W_layer.weight.shape
+                )
+            )
+            LRS_module.U_layer.weight = nn.Parameter(
+                _ortho_generator(LRS_module.U_layer, self.activation).reshape(
+                    LRS_module.U_layer.weight.shape
+                )
+            )
+        else:
+            LRS_module.W_layer.weight = nn.Parameter(
+                w_weight_matrix.reshape(LRS_module.W_layer.weight.shape)
+            )
+            LRS_module.U_layer.weight = nn.Parameter(
+                u_weight_matrix.reshape(LRS_module.U_layer.weight.shape)
+            )
 
         if self.sparse_matrix:
             LRS_module.S_layer.weight = nn.Parameter(s_weight_matrix)
-            # Pruning the sparse matrix so that it is not updated during training
             torch.nn.utils.prune.custom_from_mask(
                 LRS_module.S_layer, name="weight", mask=(s_weight_matrix != 0) * 1
             )
 
         return LRS_module
 
-    def initialize_low_rank(self):
+    def initialize_low_rank_mlp(self):
         for module_name, module in self.model.hidden_layers.named_modules():
             if isinstance(module, nn.Linear):
                 self.model.hidden_layers._modules[module_name] = self._low_rank_sparse(
                     module
+                )
+
+    def initialize_low_rank_mixer(self):
+        for module_name, module in self.model.mixer_layers.named_modules():
+            if isinstance(module, nn.Linear):
+                name = list(module_name.split("."))
+                setattr(
+                    self.model.mixer_layers[int(name[0])].mlp2,
+                    name[2],
+                    self._low_rank_sparse(module, layer_type="linear"),
+                )
+
+            elif isinstance(module, nn.Conv1d):
+                name = list(module_name.split("."))
+                setattr(
+                    self.model.mixer_layers[int(name[0])].mlp1,
+                    name[2],
+                    self._low_rank_sparse(module, layer_type="conv1d"),
                 )
 
         return self.model

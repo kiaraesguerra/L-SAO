@@ -82,23 +82,23 @@ class Ramanujan_Constructions:
             sao_matrix[indices] = identical_row
 
         return sao_matrix
-    
+
     def _rg_2(self, ramanujan_mask, degree):
         nonzeros = torch.nonzero(ramanujan_mask)
         sao_matrix = torch.zeros(ramanujan_mask.shape)
-        
+
         col_num = 0
         vals = self._val_generator()
 
-        for i,j in nonzeros:
-            row_num = int(i/(ramanujan_mask.shape[0]/degree))         
+        for i, j in nonzeros:
+            row_num = int(i / (ramanujan_mask.shape[0] / degree))
             if col_num == degree:
                 col_num = 0
 
             sao_matrix[i, j] = torch.tensor(vals[row_num, col_num])
-            col_num +=1
-            
-        return sao_matrix.to('cuda')   
+            col_num += 1
+
+        return sao_matrix.to("cuda")
 
     def _block_construct(self):
         """_summary_
@@ -166,12 +166,12 @@ class Ramanujan_Constructions:
         c = int(torch.sum(ramanujan_mask, 0)[0])
         d = int(torch.sum(ramanujan_mask, 1)[0])
         degree = c if c > d else d
-        
+
         if self.same_weights is True:
             sao_matrix = self._rg_2(ramanujan_mask, degree)
         else:
             sao_matrix = self._rg(ramanujan_mask, degree)
-        
+
         return sao_matrix
 
     def _ramanujan_structure(self):
