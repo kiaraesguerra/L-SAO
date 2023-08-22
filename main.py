@@ -31,6 +31,7 @@ parser.add_argument(
 parser.add_argument(
     "--sparse-matrix", type=str, default=None, choices=["SAO", "LMP", "RG-U", "RG-N"]
 )
+parser.add_argument('--rank', type=int, default=None)
 parser.add_argument("--threshold", type=float, default=1e-3)
 
 

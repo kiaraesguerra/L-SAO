@@ -22,7 +22,7 @@ class Ramanujan_Constructions:
         self.in_ = width
         self.out_ = height
         self.rows = min(self.out_, self.in_)
-        self.columns = max(self.out_, self.out_)
+        self.columns = max(self.out_, self.in_)
         self.sparsity = sparsity
         self.degree = degree if sparsity is None else self._degree_from_sparsity()
         self.method = method

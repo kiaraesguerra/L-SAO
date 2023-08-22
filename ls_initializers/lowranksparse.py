@@ -105,7 +105,7 @@ class LowRankSparseInitializer:
 
     def _low_rank_sparse(self, module, layer_type):
         LR = module.weight.reshape(module.weight.shape[0], -1).to("cuda")
-
+        
         if self.sparse_matrix:
             s_weight_matrix = self._sparse_matrix(module)
             LR = LR - s_weight_matrix
@@ -179,12 +179,12 @@ class LowRankSparseInitializer:
                     self._low_rank_sparse(module, layer_type="linear"),
                 )
 
-            elif isinstance(module, nn.Conv1d):
-                name = list(module_name.split("."))
-                setattr(
-                    self.model.mixer_layers[int(name[0])].mlp1,
-                    name[2],
-                    self._low_rank_sparse(module, layer_type="conv1d"),
-                )
+            # elif isinstance(module, nn.Conv1d):
+            #     name = list(module_name.split("."))
+            #     setattr(
+            #         self.model.mixer_layers[int(name[0])].mlp1,
+            #         name[2],
+            #         self._low_rank_sparse(module, layer_type="conv1d"),
+            #     )
 
         return self.model
