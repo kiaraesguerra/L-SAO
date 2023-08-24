@@ -9,8 +9,9 @@ def get_ls_init(model, args):
         sparsity=args.sparsity,
         degree=args.degree,
         activation=args.activation,
+        rank=args.rank,
     )
-    if args.model == "mlp":
+    if args.model == "mlp" or args.model == "residualmlp":
         initialized_model = initializer.initialize_low_rank_mlp().to("cuda")
     elif args.model == "mixer":
         initialized_model = initializer.initialize_low_rank_mixer().to("cuda")
