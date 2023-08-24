@@ -47,13 +47,13 @@ class ResidualMLP(nn.Module):
         x = x.view(-1, self.image_size * self.image_size * self.num_input_channels)
         x = self.input_layer(x)
         x = self.activation(x)
-        
+
+
         for layer, bn in zip(self.hidden_layers, self.bn_layers):
             y = layer(x)
             y = bn(y)
-            y += x
             x = self.activation(y)
-            
+
         x = self.output_layer(x)
 
         return x
