@@ -10,8 +10,8 @@ def get_weight_init(model, args):
     elif args.weight_init == 'uniform':
         model = UniformInit(model, a=args.a, b=args.b)
     elif args.weight_init == 'ortho':
-        model = OrthoInit(model, gain=args.gain, activation=args.activation)
-        
+        model = OrthoInit(model, gain=args.gain, activation=args.activation, degree=args.degree, sparsity=args.sparsity)
+
     return model
         
     

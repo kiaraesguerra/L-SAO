@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch
+from initializers.delta import Delta_Constructor
 
 
 def _ortho_gen(rows, columns) -> torch.tensor:
@@ -33,10 +34,13 @@ def _ortho_generator(module, activation) -> torch.tensor:
     return orthogonal_matrix
 
 
-def OrthoInit(model, gain, activation):
+def OrthoInit(model, gain, activation, degree, sparsity):
     for _, module in model.named_modules():
         if isinstance(module, nn.Linear):
             module.weight = nn.Parameter(_ortho_generator(module, activation) * gain)
+        elif isinstance(module, nn.Conv2d):
+            vals = Delta_Constructor(module=module, gain=gain, activation=activation, degree=degree, sparsity=sparsity)
+            module.weight = nn.Parameter(vals)
 
     return model
 

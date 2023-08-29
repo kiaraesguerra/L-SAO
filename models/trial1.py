@@ -45,7 +45,7 @@ class Trial1_Module(nn.Module):
         #36.1
     def forward(self, x):
         #x_conv = self.bn1(self.sao_conv(x))
-        x_conv = self.bn1(self.sao_conv(x))
+        x_conv = self.sao_conv(x)
         x_fc = x.view(x.size(0), -1)
         x_fc = self.lr_fc1(x_fc, x.size())
         x_fc = self.lr_fc2(x_fc, x_conv.size())

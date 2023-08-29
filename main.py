@@ -93,6 +93,9 @@ if __name__ == "__main__":
     if args.low_rank:
         model = get_ls_init(model, args)
         
+        
+    breakpoint()
+        
     model = get_plmodule(model, args)
     callbacks = get_callback(args)
     logger = get_logger(args)
