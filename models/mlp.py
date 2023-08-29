@@ -33,19 +33,28 @@ class MLP(nn.Module):
                 for _ in range(num_layers - 1)
             ]
         )
+        
+        self.bn_layers = nn.ModuleList(
+            [
+                nn.BatchNorm1d(hidden_width)
+                for _ in range(num_layers - 1)
+            ]
+        )        
+        
         self.output_layer = nn.Linear(hidden_width, num_classes)
 
     def forward(self, x):
         x = x.view(-1, self.image_size * self.image_size * self.num_input_channels)
         x = self.input_layer(x)
         x = self.activation(x)
-        for layer in self.hidden_layers:
-            x = layer(x)
-            x = self.activation(x)
+
+        for layer, bn in zip(self.hidden_layers, self.bn_layers):
+            y = layer(x)
+            y = bn(y)
+            x = self.activation(y)
         x = self.output_layer(x)
 
         return x
-
 
 def mlp(**kwargs):
     return MLP(**kwargs)

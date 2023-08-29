@@ -32,24 +32,40 @@ class LSModule(nn.Module):
             self.U_layer = nn.Linear(
                 in_features=rank, out_features=out_features, bias=False
             )
-        else:
+        elif self.layer_type == "conv1d":
             self.W_layer = nn.Conv1d(
                 in_channels=in_features, out_channels=rank, kernel_size=1, bias=False
             )
             self.U_layer = nn.Conv1d(
                 in_channels=rank, out_channels=out_features, kernel_size=1, bias=False
             )
+            
+        elif self.layer_type == 'conv2d':
+            self.W_layer = nn.Conv2d(
+                in_channels=in_features, out_channels=rank, kernel_size=3, bias=False
+            )
+            self.U_layer = nn.Conv2d(
+                in_channels=rank, out_channels=out_features, kernel_size=3, bias=False
+            )
+            
 
         if self.sparse_matrix:
             if self.layer_type == "linear":
                 self.S_layer = nn.Linear(
                     in_features=in_features, out_features=out_features, bias=False
                 )
-            else:
+            elif self.layer_type == "conv1d":
                 self.S_layer = nn.Conv1d(
                     in_channels=in_features,
                     out_channels=out_features,
                     kernel_size=1,
+                    bias=False,
+                )
+            elif self.layer_type == "conv2d":
+                self.S_layer = nn.Conv3d(
+                    in_channels=in_features,
+                    out_channels=out_features,
+                    kernel_size=3,
                     bias=False,
                 )
 
@@ -186,5 +202,17 @@ class LowRankSparseInitializer:
             #         name[2],
             #         self._low_rank_sparse(module, layer_type="conv1d"),
             #     )
+            
+            
+    def _process_layer(self, layer):
+        for module_name, module in layer.named_modules():
+            if isinstance(module, nn.Conv2d):
+                name = list(module_name.split("."))
+                setattr(layer[int(name[0])], name[1], self._low_rank_sparse(module, layer_type='conv2d'))
+                
+    def initialize_resnet(self):
+        self._process_layer(self.model.layer1)
+        self._process_layer(self.model.layer2)     
+        self._process_layer(self.model.layer3)   
 
         return self.model
